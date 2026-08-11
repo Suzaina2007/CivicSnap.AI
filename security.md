@@ -1,131 +1,153 @@
-# CivicSnap.AI - Security
+# CivicSnap.AI Security Documentation
 
-## 1. Overview
+## 1. Security Overview
 
-This document describes the security considerations and practices followed in the CivicSnap.AI system.
+CivicSnap.AI uses a proxy-based architecture to separate the public frontend from private automation configuration.
 
-Security is maintained across the frontend, production proxy, automation workflow, external service integrations, and repository management.
-
----
-
-## 2. Security Objectives
-
-The main security objectives are:
-
-- Protect user-submitted complaint data.
-- Protect system credentials and private configurations.
-- Secure communication between system components.
-- Prevent exposure of sensitive information.
-- Maintain safe repository practices.
+The frontend communicates with the public Cloudflare Worker proxy. The proxy forwards requests to the configured Make automation webhook without exposing the private webhook configuration to the frontend.
 
 ---
 
-## 3. Frontend Security
+## 2. Public and Private Architecture Boundary
 
-The frontend should follow secure development practices:
+### Public Components
 
-- Validate user inputs before submission.
-- Avoid storing sensitive information in the browser.
-- Do not expose private keys or secrets in frontend code.
-- Communicate only with trusted backend endpoints.
+The following components are intentionally accessible to the public:
+
+- CivicSnap.AI frontend
+- Cloudflare Worker proxy endpoint
+
+The proxy endpoint is public because the frontend requires it for API communication.
+
+### Private Components
+
+The following information remains private:
+
+- Make webhook configuration
+- `MAKE_WEBHOOK_URL` value
+- Google service credentials
+- API keys
+- Authentication tokens
+- Service connection credentials
+- Other secret environment variables
+
+These values must not be committed to the public GitHub repository.
 
 ---
 
-## 4. Production Proxy Security
+## 3. Secret Management
 
-The production proxy acts as a controlled communication layer between the frontend and automation workflow.
+The Make webhook configuration is maintained on the server-side Cloudflare Worker environment.
 
-Security practices include:
+The frontend uses only the public proxy endpoint and does not contain the private Make webhook value.
 
-- Keep webhook URLs and secrets protected.
-- Avoid exposing internal automation configuration.
-- Validate incoming requests where required.
-- Maintain secure communication between services.
+The repository may contain:
+
+- Source code
+- Documentation
+- Non-sensitive configuration
+- Environment variable placeholders
+
+The repository must not contain:
+
+- Secret values
+- Private webhook URLs
+- Passwords
+- API credentials
+- Access tokens
+- Service credentials
+- Private citizen information
+
+The `.env.example` file contains placeholders only and must never contain production secrets.
+
+---
+
+## 4. Proxy Security Role
+
+The Cloudflare Worker provides the security boundary between the public frontend and the Make automation workflow.
+
+The Worker:
+
+- Receives frontend requests.
+- Handles CORS preflight requests.
+- Accepts supported POST requests.
+- Rejects unsupported HTTP methods.
+- Checks required server-side configuration.
+- Forwards complaint requests to the configured Make webhook.
+- Returns the automation response to the frontend.
+
+The private Make webhook configuration remains outside the frontend source code.
 
 ---
 
 ## 5. Make Automation Security
 
-The Make automation workflow handles complaint processing and external integrations.
+The Make automation scenario uses configured service connections for external services and automated communication.
 
-Security practices include:
+These service connections are maintained inside Make and are not stored in the GitHub repository.
 
-- Protect Make account access.
-- Keep connection credentials private.
-- Avoid exposing webhook secrets.
-- Limit access to required services only.
-- Store exported blueprints without sensitive credentials.
+The exported Make Blueprint can be stored as a reusable project artifact, but credentials and account connections must be configured separately.
 
 ---
 
-## 6. Repository Security
+## 6. GitHub Security Guidelines
 
-The GitHub repository should not contain:
+Before publishing or sharing the repository, verify that it does not contain:
 
+- Make webhook secrets
 - API keys
 - Passwords
+- Google credentials
 - Access tokens
-- OAuth credentials
-- Private webhook secrets
-- Production environment secrets
+- Private environment files
+- Citizen personal information
+- Production service credentials
 
-Only non-sensitive source code, documentation, and safe configuration examples should be committed.
-
----
-
-## 7. Environment Variables
-
-Sensitive configuration values should be stored using environment variables or secure secret management systems.
+Only variable names, placeholders, and non-sensitive configuration should appear in documentation.
 
 Example:
 
-```env
-API_KEY=your_secret_value
-WEBHOOK_SECRET=your_secret_value
+```text
+MAKE_WEBHOOK_URL=your_webhook_url_here
 ```
 
-Real production values must never be committed to GitHub.
+The actual production value must remain private.
 
 ---
 
-## 8. Data Protection
+## 7. Current Security Limitations
 
-Complaint information should be handled carefully throughout the workflow.
+The current implementation does not include:
 
-Important practices:
+- User authentication
+- Rate limiting
+- Advanced request-size restrictions
+- Advanced origin-based access controls
+- A dedicated user authorization system
 
-- Process only required data.
-- Avoid unnecessary data storage.
-- Protect user information during transmission.
-- Restrict access to stored information.
-
----
-
-## 9. Third-Party Services
-
-External services connected with CivicSnap.AI should be configured securely.
-
-Access should be:
-
-- Authorized only for required accounts.
-- Protected with proper authentication.
-- Reviewed when integrations change.
+These can be considered as future security enhancements as the platform scales.
 
 ---
 
-## 10. Security Maintenance
+## 8. Security Status
 
-Security practices should be reviewed whenever:
+The current production architecture keeps the private Make webhook configuration outside the public frontend and repository.
 
-- New integrations are added.
-- Deployment configuration changes.
-- Repository structure changes.
-- New user data requirements are introduced.
+The frontend, Cloudflare Worker proxy, Make automation workflow, and external service connections are operational.
+
+No production credentials or secret values should be committed to GitHub.
 
 ---
 
-## 11. Documentation Purpose
+## 9. Security Maintenance
 
-This document provides security guidelines for maintaining CivicSnap.AI safely.
+Security should be reviewed whenever:
 
-Sensitive implementation details, credentials, and private configurations must always remain protected outside the public repository.
+- Proxy configuration changes.
+- Make integrations change.
+- New external services are connected.
+- New environment variables are introduced.
+- Authentication or authorization is added.
+- Deployment infrastructure changes.
+
+The security documentation should be updated whenever the production architecture changes.
